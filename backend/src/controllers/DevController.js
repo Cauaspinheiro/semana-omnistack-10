@@ -13,7 +13,12 @@ module.exports = {
         `https://api.github.com/users/${github_username}`
       );
 
-      const { name = login, avatar_url, bio } = response.data;
+      const { login, avatar_url, bio } = response.data;
+      let { name } = response.data;
+
+      if (!name) {
+        name = login;
+      }
 
       const techsArray = StringToArray(techs);
 
