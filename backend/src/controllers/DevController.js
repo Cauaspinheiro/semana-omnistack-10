@@ -1,6 +1,7 @@
 const axios = require("axios");
 const Dev = require("../models/Dev");
 const StringToArray = require("../util/string_to_array");
+const { findConnections, sendMessage } = require("../websocket");
 
 module.exports = {
   async store(req, res) {
@@ -8,41 +9,48 @@ module.exports = {
 
     let dev = await Dev.findOne({ github_username });
 
-    if (!dev) {
-      const response = await axios.get(
-        `https://api.github.com/users/${github_username}`
-      );
-
-      const { login, avatar_url, bio } = response.data;
-      let { name } = response.data;
-
-      if (!name) {
-        name = login;
-      }
-
-      const techsArray = StringToArray(techs);
-
-      const location = {
-        type: "Point",
-        coordinates: [longitude, latitude]
-      };
-
-      dev = await Dev.create({
-        github_username,
-        name,
-        avatar_url,
-        bio,
-        techs: techsArray,
-        location
+    if (dev) {
+      return res.json({
+        errorMessage: "Já existe um Dev cadastrado com esse usuário do github",
+        dev
       });
-
-      return res.json(dev);
     }
 
-    return res.json({
-      errorMessage: "Já existe um Dev cadastrado com esse usuário do github",
-      dev
+    const response = await axios.get(
+      `https://api.github.com/users/${github_username}`
+    );
+
+    const { login, avatar_url, bio } = response.data;
+    let { name } = response.data;
+
+    if (!name) {
+      name = login;
+    }
+
+    const techsArray = StringToArray(techs);
+
+    const location = {
+      type: "Point",
+      coordinates: [longitude, latitude]
+    };
+
+    dev = await Dev.create({
+      github_username,
+      name,
+      avatar_url,
+      bio,
+      techs: techsArray,
+      location
     });
+
+    const sendSocketMessageTo = findConnections(
+      { latitude, longitude },
+      techsArray
+    );
+
+    sendMessage(sendSocketMessageTo, "new-dev", dev);
+
+    return res.json(dev);
   },
 
   async index(req, res) {

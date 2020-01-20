@@ -6,10 +6,6 @@ module.exports = {
   async index(req, res) {
     const { latitude, longitude, techs, distance = 10000 } = req.query;
 
-    if (!techs) {
-      return res.json({ errorMessage: "Não foram selecionadas tecnologias" });
-    }
-
     if (techs == "all") {
       const devs = await Dev.find({
         location: {
